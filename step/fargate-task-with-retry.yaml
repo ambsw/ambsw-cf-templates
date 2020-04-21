@@ -1,0 +1,212 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Step Function that will run a Fargate Task, retrying on Container not Found errors (e.g. Dockerhub connection errors)'
+Parameters:
+  # for better semantics see https://mike.bailey.net.au/2018/11/semantic-cloudformation-parameter-values/
+  ParentVPCStack:
+    Description: 'Stack name of parent VPC stack based on vpc/vpc-*azs.yaml template.'
+    Type: String
+  ParentClientStack:
+    Description: 'Stack name of parent client stack based on state/client-sg.yaml template.'
+    Type: String
+  ParentClusterStack:
+    Description: 'Stack name of parent Cluster stack based on fargate/cluster.yaml template.'
+    Type: String
+  Identifier:
+    Description: 'Trailing path containing SSM configurations for this container'
+    Type: String
+    Default: ''
+Resources:
+  LambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: !Sub 'lambda.${AWS::Region}.amazonaws.com'
+          Action: 'sts:AssumeRole'
+  TaskErrorExtractor:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role: !GetAtt 'LambdaRole.Arn'
+      Code:
+        ZipFile: |
+          import json
+          def handler(event, lambda_context):
+              try:
+                  msg = json.loads(event)
+                  if 'Containers' not in msg or len(msg['Containers']) <1 or 'Reason' not in msg['Containers'][0]:
+                      return {'Error': 'Containers.Reason Not Found', 'Cause': event}
+                  parts = msg['Containers'][0]['Reason'].split(':')
+                  if len(parts) == 1:
+                      return {'Error': parts[0], 'Cause': ''}
+                  return {'Error': parts.pop(0), 'Cause': ':'.join(parts).strip()}
+              except:
+                  return {'Error': 'Not Stringified JSON', 'Cause': event}
+      Handler: index.handler
+      MemorySize: 128
+      Runtime: 'python3.7'
+  StepFunctionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: !Sub 'states.${AWS::Region}.amazonaws.com'
+          Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: ecs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Alerts
+              - Effect: Allow
+                Action:
+                  - SNS:Publish
+                Resource:
+                  - {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
+              # Lambda
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt 'TaskErrorExtractor.Arn'
+              # ECS Role Assignment
+              - Effect: Allow
+                Action:
+                - iam:AddRoleToInstanceProfile
+                - iam:PassRole
+                Resource:
+                # Both are required
+                - !GetAtt 'MigrateTask.Outputs.TaskExecutionRoleArn'
+                - !GetAtt 'MigrateTask.Outputs.TaskRoleArn'
+              # ECS Task
+              - Effect: Allow
+                Action:
+                - ecs:RunTask
+                Resource:
+                - !GetAtt 'MigrateTask.Outputs.TaskARN'
+              - Effect: Allow
+                Action:
+                - ecs:StopTask
+                - ecs:DescribeTasks
+                Resource:
+                - !GetAtt 'MigrateTask.Outputs.TaskARN'
+              - Effect: Allow
+                Action:
+                - events:PutTargets
+                - events:PutRule
+                - events:DescribeRule
+                Resource:
+                - !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForECSTaskRule'
+  StepFunction:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Ref Identifier
+      RoleArn: !GetAtt 'StepFunctionRole.Arn'
+      # for spec, see https://states-language.net/spec.html#task-state
+      # for fargate task, see https://docs.aws.amazon.com/step-functions/latest/dg/connect-ecs.html
+      # for retry/catch, see https://docs.amazonaws.cn/en_us/step-functions/latest/dg/concepts-error-handling.html#error-handling-examples
+      # for lambda invocation, see https://docs.aws.amazon.com/step-functions/latest/dg/connect-lambda.html
+      # for lambda + callback, see https://docs.amazonaws.cn/en_us/step-functions/latest/dg/callback-task-sample-sqs.html
+      DefinitionString: !Sub
+        - |
+          {
+            "Comment": "Database Migrations",
+            "StartAt": "Migrate",
+            "States": {
+              "Migrate": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::ecs:runTask.sync",
+                "Parameters": {
+                  "LaunchType": "FARGATE",
+                  "Cluster": "${ClusterArn}",
+                  "TaskDefinition": "${TaskDefinition}",
+                  "NetworkConfiguration": {
+                    "AwsvpcConfiguration":{
+                      "Subnets": ${Subnets},
+                      "SecurityGroups":["${SecurityGroup}"],
+                      "AssignPublicIp":"DISABLED"
+                    }
+                  }
+                },
+                "Retry":[
+                  {
+                    "ErrorEquals":[
+                      "StepFunctions.ExecutionLimitExceeded"
+                    ]
+                  }
+                ],
+                "End": true,
+                "Catch": [ {
+                   "ErrorEquals": [ "States.TaskFailed" ],
+                   "Next": "FailureExtractor"
+                }, {
+                   "ErrorEquals": [ "States.ALL" ],
+                   "Next": "FailureAlert"
+                } ]
+              },
+              "FailureExtractor": {
+                "Type": "Task",
+                "Resource": "${FailureExtractorLambda}",
+                "InputPath": "$.Cause",
+                "ResultPath": "$",
+                "Next":"FailureTest"
+              },
+              "FailureTest": {
+                "Type": "Choice",
+                "Choices": [{
+                    "Variable": "$.Error",
+                    "StringEquals": "CannotPullContainerError",
+                    "Next": "Migrate"
+                  }
+                ],
+                "Default": "FailureAlert"
+              },
+              "FailureAlert": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::sns:publish",
+                "Parameters": {
+                  "TopicArn": "${AlertTopic}",
+                  "Subject": "Migration Failed: ${Identifier}",
+                  "Message.$": "$",
+                  "MessageAttributes": {
+                    "Identifier": {
+                      "DataType": "String",
+                      "StringValue": "${Identifier}"
+                    }
+                  }
+                },
+                "Next": "Fail"
+              },
+              "Fail": {
+                "Type": "Fail"
+              }
+            }
+          }
+        - AlertTopic: {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
+          ClusterArn: {'Fn::ImportValue': !Sub '${ParentClusterStack}-Cluster'}
+          Subnets: !Sub
+            - '["${SubnetAPrivate}", "${SubnetBPrivate}"]'
+            - SubnetAPrivate: {'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetAPrivate'}
+              SubnetBPrivate: {'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetBPrivate'}
+          SecurityGroup: {'Fn::ImportValue': !Sub '${ParentClientStack}-ClientSecurityGroup'}
+          TaskDefinition: !GetAtt 'MigrateTask.Outputs.TaskARN'
+          Identifier: !Ref Identifier
+          FailureExtractorLambda: !GetAtt 'TaskErrorExtractor.Arn'
+Outputs:
+  TemplateID:
+    Description: 'template id.'
+    Value: 'step/fargate-task-with-retry'
+  TemplateVersion:
+    Description: 'template version.'
+    Value: '__VERSION__'
+  StackName:
+    Description: 'Stack name.'
+    Value: !Sub '${AWS::StackName}'
+  StepFunctionARN:
+    Description:  'ARN of step function that will run the target migration.'
+    Value: !Ref StepFunction
