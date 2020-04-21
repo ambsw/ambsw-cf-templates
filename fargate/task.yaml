@@ -297,9 +297,6 @@ Conditions:
   HasAppEnvironment1Key: !Not [!Equals [!Ref AppEnvironment1Key, '']]
   HasAppEnvironment2Key: !Not [!Equals [!Ref AppEnvironment2Key, '']]
   HasAppEnvironment3Key: !Not [!Equals [!Ref AppEnvironment3Key, '']]
-  HasAppEnvironment4Key: !Not [!Equals [!Ref AppEnvironment4Key, '']]
-  HasAppEnvironment5Key: !Not [!Equals [!Ref AppEnvironment5Key, '']]
-  HasAppEnvironment6Key: !Not [!Equals [!Ref AppEnvironment6Key, '']]
   HasProxyImage: !Not [!Equals [!Ref ProxyImage, '']]
   HasProxyCommand: !Not [!Equals [!Ref ProxyCommand, '']]
   HasProxyEnvironment1Key: !Not [!Equals [!Ref ProxyEnvironment1Key, '']]
@@ -457,9 +454,15 @@ Outputs:
   TaskARN:
     Description: 'ARN for task'
     Value: !Ref TaskDefinition
+    Export:
+      Name: !Sub '${AWS::StackName}-TaskARN'
   TaskExecutionRoleArn:
     Description: 'ARN for TaskExecutionRole'
     Value: !GetAtt 'TaskExecutionRole.Arn'
+    Export:
+      Name: !Sub '${AWS::StackName}-TaskExecutionRoleARN'
   TaskRoleArn:
     Description: 'ARN for TaskRole'
     Value: !GetAtt 'TaskRole.Arn'
+    Export:
+      Name: !Sub '${AWS::StackName}-TaskRoleARN'

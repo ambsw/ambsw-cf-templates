@@ -11,6 +11,10 @@ Parameters:
   ParentClusterStack:
     Description: 'Stack name of parent Cluster stack based on fargate/cluster.yaml template.'
     Type: String
+  ParentTaskStack:
+    Description: 'Stack name of parent Task stack based on fargate/task.yaml template.'
+    Type: String
+    Default: ''
   Identifier:
     Description: 'Trailing path containing SSM configurations for this container'
     Type: String
@@ -81,20 +85,20 @@ Resources:
                 - iam:PassRole
                 Resource:
                 # Both are required
-                - !GetAtt 'MigrateTask.Outputs.TaskExecutionRoleArn'
-                - !GetAtt 'MigrateTask.Outputs.TaskRoleArn'
+                - {'Fn::ImportValue': !Sub '${ParentTaskStack}-TaskExecutionRoleARN'}
+                - {'Fn::ImportValue': !Sub '${ParentTaskStack}-TaskRoleARN'}
               # ECS Task
               - Effect: Allow
                 Action:
                 - ecs:RunTask
                 Resource:
-                - !GetAtt 'MigrateTask.Outputs.TaskARN'
+                - {'Fn::ImportValue': !Sub '${ParentTaskStack}-TaskARN'}
               - Effect: Allow
                 Action:
                 - ecs:StopTask
                 - ecs:DescribeTasks
                 Resource:
-                - !GetAtt 'MigrateTask.Outputs.TaskARN'
+                - {'Fn::ImportValue': !Sub '${ParentTaskStack}-TaskARN'}
               - Effect: Allow
                 Action:
                 - events:PutTargets
@@ -194,7 +198,7 @@ Resources:
             - SubnetAPrivate: {'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetAPrivate'}
               SubnetBPrivate: {'Fn::ImportValue': !Sub '${ParentVPCStack}-SubnetBPrivate'}
           SecurityGroup: {'Fn::ImportValue': !Sub '${ParentClientStack}-ClientSecurityGroup'}
-          TaskDefinition: !GetAtt 'MigrateTask.Outputs.TaskARN'
+          TaskDefinition: {'Fn::ImportValue': !Sub '${ParentTaskStack}-TaskARN'}
           Identifier: !Ref Identifier
           FailureExtractorLambda: !GetAtt 'TaskErrorExtractor.Arn'
 Outputs:
