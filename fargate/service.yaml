@@ -805,6 +805,9 @@ Outputs:
   StackName:
     Description: 'Stack name.'
     Value: !Sub '${AWS::StackName}'
+  LogGroup:
+    Description: 'LogGroup'
+    Value: !Ref LogGroup
   SecurityGroup:
     Description: 'Security Group attached to the service'
     Value: !Ref ServiceSecurityGroup
@@ -816,6 +819,3 @@ Outputs:
     Value: !If [HasProxyImage, !Ref ProxyPort, !Ref AppPort]
     Export:
       Name: !Sub '${AWS::StackName}-Port'
-  LogGroup:
-    Description: 'LogGroup'
-    Value: !Ref LogGroup
