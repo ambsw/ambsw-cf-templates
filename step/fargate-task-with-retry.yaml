@@ -3,9 +3,8 @@ Description: 'Step Function that will run a Fargate Task, retrying on Container 
 Parameters:
   # for better semantics see https://mike.bailey.net.au/2018/11/semantic-cloudformation-parameter-values/
   ParentAlertStack:
-    Description: 'Optional but recommended stack name of parent alert stack based on operations/alert.yaml template.'
+    Description: 'Stack name of parent alert stack based on operations/alert.yaml template.'
     Type: String
-    Default: ''
   ParentVPCStack:
     Description: 'Stack name of parent VPC stack based on vpc/vpc-*azs.yaml template.'
     Type: String
@@ -219,3 +218,5 @@ Outputs:
   StepFunctionARN:
     Description:  'ARN of step function that will run the target migration.'
     Value: !Ref StepFunction
+    Export:
+      Name: !Sub '${AWS::StackName}-StepFunctionARN'
