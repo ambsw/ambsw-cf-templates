@@ -2,6 +2,10 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Step Function that will run a Fargate Task, retrying on Container not Found errors (e.g. Dockerhub connection errors)'
 Parameters:
   # for better semantics see https://mike.bailey.net.au/2018/11/semantic-cloudformation-parameter-values/
+  ParentAlertStack:
+    Description: 'Optional but recommended stack name of parent alert stack based on operations/alert.yaml template.'
+    Type: String
+    Default: ''
   ParentVPCStack:
     Description: 'Stack name of parent VPC stack based on vpc/vpc-*azs.yaml template.'
     Type: String
@@ -19,6 +23,7 @@ Parameters:
     Description: 'Trailing path containing SSM configurations for this container'
     Type: String
     Default: ''
+    AllowedPattern: ^[^"]*$
 Resources:
   LambdaRole:
     Type: 'AWS::IAM::Role'
