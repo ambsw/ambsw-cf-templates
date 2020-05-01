@@ -99,6 +99,7 @@ Resources:
                 - {'Fn::ImportValue': !Sub '${ParentTaskStack}-TaskARN'}
               - Effect: Allow
                 Action:
+                # These actions must be applied to the cluster not the stack
                 - ecs:StopTask
                 - ecs:DescribeTasks
                 Resource:
