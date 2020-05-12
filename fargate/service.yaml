@@ -445,7 +445,7 @@ Rules:
     RuleCondition: !Not [!Equals [!Ref ParentCloudMapStack, '']]
     Assertions:
     - AssertDescription: CloudMapName required if ParentCloudMapStack present
-      Assert: !Not [!Equals [!Ref ParentCloudMapStack, '']]
+      Assert: !Not [!Equals [!Ref CloudMapName, '']]
     - AssertDescription: ParentCloudMapIngressStack required if ParentCloudMapStack present
       Assert: !Not [!Equals [!Ref ParentCloudMapIngressStack, '']]
 Resources:
