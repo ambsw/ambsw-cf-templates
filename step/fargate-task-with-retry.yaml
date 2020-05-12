@@ -216,8 +216,8 @@ Outputs:
   StackName:
     Description: 'Stack name.'
     Value: !Sub '${AWS::StackName}'
-  StepFunctionARN:
+  StepFunctionArn:
     Description:  'ARN of step function that will run the target migration.'
     Value: !Ref StepFunction
     Export:
-      Name: !Sub '${AWS::StackName}-StepFunctionARN'
+      Name: !Sub '${AWS::StackName}-StepFunctionArn'
