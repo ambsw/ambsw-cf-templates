@@ -378,7 +378,7 @@ Outputs:
         - !If [HasTransitEncryption, 's', '']
         - '://'
         # No username needed for Redis AUTH
-        - !If [HasAuthToken, !Sub ':${RedisAuthToken}@', '']
+        - !If [HasAuthToken, !Sub ':${AuthToken}@', '']
         - !GetAtt 'ReplicationGroup.PrimaryEndPoint.Address'
         - ':'
         - !GetAtt 'ReplicationGroup.PrimaryEndPoint.Port'
