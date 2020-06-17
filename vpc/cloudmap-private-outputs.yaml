@@ -1,0 +1,32 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'VPC: a private service registry (aka. Cloud Map private namespace), a cloudonaut.io template'
+Parameters:
+  ParentCloudMapStack:
+    Description: 'Stack name of parent Cloud Map stack based on vpc/cloudmap-private.yaml template.'
+    Type: String
+Conditions:
+  Never: !Equals ['true', 'false']
+Resources:
+  NullResource:
+    Condition: Never
+    Type: 'Custom::Null'
+Outputs:
+  TemplateID:
+    Description: 'cloudonaut.io template id.'
+    Value: 'vpc/cloudmap-private'
+  TemplateVersion:
+    Description: 'cloudonaut.io template version.'
+    Value: '__VERSION__'
+  StackName:
+    Description: 'Stack name.'
+    Value: !Sub '${AWS::StackName}'
+  NamespaceARN:
+    Description: 'The ARN of the namespace.'
+    Value: {'Fn::ImportValue': !Sub '${ParentCloudMapStack}-NamespaceARN'}
+    Export:
+      Name: !Sub '${AWS::StackName}-NamespaceARN'
+  NamespaceID:
+    Description: 'The ID of the namespace.'
+    Value: {'Fn::ImportValue': !Sub '${ParentCloudMapStack}-NamespaceID'}
+    Export:
+      Name: !Sub '${AWS::StackName}-NamespaceID'
