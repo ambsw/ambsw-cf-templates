@@ -1,0 +1,203 @@
+---
+# Copyright 2019 Clayton Daley
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Operations: Alert topic, a cloudonaut.io template'
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+    - Label:
+        default: 'Modules'
+      Parameters:
+      - ParentVpcStack
+Parameters:
+  ParentVpcStack:
+    Description: 'Optional but recommended stack name of parent alert stack based on operations/alert.yaml template.'
+    Type: String
+  NumberOfAvailabilityZones:
+    Description: 'How many availability zones should be used?'
+    Type: Number
+    Default: 2
+    MinValue: 2
+    MaxValue: 4
+Conditions:
+  HasAvailabilityZoneD: !Equals [!Ref NumberOfAvailabilityZones, 4]
+  HasAvailabilityZoneC: !Or [!Condition HasAvailabilityZoneD, !Equals [!Ref NumberOfAvailabilityZones, 3]]
+  Never: !Equals ['true', 'false']
+Resources:
+  NullResource:
+    Condition: Never
+    Type: 'Custom::Null'
+Outputs:
+  TemplateID:
+    Value: 'vpc/outputs'
+  TemplateVersion:
+    Value: '__VERSION__'
+  StackName:
+    Value: !Sub '${AWS::StackName}'
+  AZs:
+    Description: 'AZs'
+    Value: !Ref NumberOfAvailabilityZones
+    Export:
+      Name: !Sub '${AWS::StackName}-AZs'
+  AZA:
+    Description: 'AZ of A'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-AZA'}
+    Export:
+      Name: !Sub '${AWS::StackName}-AZA'
+  AZB:
+    Description: 'AZ of B'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-AZB'}
+    Export:
+      Name: !Sub '${AWS::StackName}-AZB'
+  AZC:
+    Condition: HasAvailabilityZoneC
+    Description: 'AZ of C'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-AZC'}
+    Export:
+      Name: !Sub '${AWS::StackName}-AZC'
+  AZD:
+    Condition: HasAvailabilityZoneD
+    Description: 'AZ of D'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-AZD'}
+    Export:
+      Name: !Sub '${AWS::StackName}-AZD'
+  CidrBlock:
+    Description: 'The set of IP addresses for the VPC.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-CidrBlock'}
+    Export:
+      Name: !Sub '${AWS::StackName}-CidrBlock'
+  CidrBlockIPv6:
+    Description: 'The set of IPv6 addresses for the VPC.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-CidrBlockIPv6'}
+    Export:
+      Name: !Sub '${AWS::StackName}-CidrBlockIPv6'
+  VPC:
+    Description: 'VPC.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-VPC'}
+    Export:
+      Name: !Sub '${AWS::StackName}-VPC'
+  InternetGateway:
+    Description: 'InternetGateway.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-InternetGateway'}
+    Export:
+      Name: !Sub '${AWS::StackName}-InternetGateway'
+  SubnetsPublic:
+    Description: 'Subnets public.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-SubnetsPublic'}
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetsPublic'
+  SubnetsPrivate:
+    Description: 'Subnets private.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-SubnetsPrivate'}
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetsPrivate'
+  RouteTablesPrivate:
+    Description: 'Route tables private.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-RouteTablesPrivate'}
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTablesPrivate'
+  RouteTablesPublic:
+    Description: 'Route tables public.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-RouteTablesPublic'}
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTablesPublic'
+  SubnetAPublic:
+    Description: 'Subnet A public.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-SubnetAPublic'}
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetAPublic'
+  RouteTableAPublic:
+    Description: 'Route table A public.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-RouteTableAPublic'}
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTableAPublic'
+  SubnetAPrivate:
+    Description: 'Subnet A private.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-SubnetAPrivate'}
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetAPrivate'
+  RouteTableAPrivate:
+    Description: 'Route table A private.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-RouteTableAPrivate'}
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTableAPrivate'
+  SubnetBPublic:
+    Description: 'Subnet B public.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-SubnetBPublic'}
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetBPublic'
+  RouteTableBPublic:
+    Description: 'Route table B public.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-RouteTableBPublic'}
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTableBPublic'
+  SubnetBPrivate:
+    Description: 'Subnet B private.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-SubnetBPrivate'}
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetBPrivate'
+  RouteTableBPrivate:
+    Description: 'Route table B private.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-RouteTableBPrivate'}
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTableBPrivate'
+  SubnetCPublic:
+    Condition: HasAvailabilityZoneC
+    Description: 'Subnet C public.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-SubnetCPublic'}
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetCPublic'
+  RouteTableCPublic:
+    Condition: HasAvailabilityZoneC
+    Description: 'Route table C public.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-RouteTableCPublic'}
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTableCPublic'
+  SubnetCPrivate:
+    Condition: HasAvailabilityZoneC
+    Description: 'Subnet C private.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-SubnetCPrivate'}
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetCPrivate'
+  RouteTableCPrivate:
+    Condition: HasAvailabilityZoneC
+    Description: 'Route table C private.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-RouteTableCPrivate'}
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTableCPrivate'
+  SubnetDPublic:
+    Condition: HasAvailabilityZoneD
+    Description: 'Subnet D public.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-SubnetDPublic'}
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetDPublic'
+  RouteTableDPublic:
+    Condition: HasAvailabilityZoneD
+    Description: 'Route table D public.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-RouteTableDPublic'}
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTableDPublic'
+  SubnetDPrivate:
+    Condition: HasAvailabilityZoneD
+    Description: 'Subnet D private.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-SubnetDPrivate'}
+    Export:
+      Name: !Sub '${AWS::StackName}-SubnetDPrivate'
+  RouteTableDPrivate:
+    Condition: HasAvailabilityZoneD
+    Description: 'Route table D private.'
+    Value: {'Fn::ImportValue': !Sub '${ParentVpcStack}-RouteTableDPrivate'}
+    Export:
+      Name: !Sub '${AWS::StackName}-RouteTableDPrivate'
