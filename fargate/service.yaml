@@ -31,6 +31,10 @@ Metadata:
       - ParentClientStack3
       - ParentSSHBastionStack
     - Label:
+        default: 'Permission Parameters'
+      Parameters:
+      - PermissionsBoundary
+    - Label:
         default: 'Task Parameters'
       Parameters:
       - TaskExecutionPolicies
@@ -123,6 +127,10 @@ Parameters:
     Default: ''
   ParentSSHBastionStack:
     Description: 'Optional but recommended stack name of parent SSH bastion host/instance stack based on vpc/vpc-*-bastion.yaml template.'
+    Type: String
+    Default: ''
+  PermissionsBoundaryArn:
+    Description: 'Optional ARN for a policy that will be used as the permission boundary for all roles created by this template.'
     Type: String
     Default: ''
   TaskExecutionPolicies:
@@ -406,6 +414,7 @@ Mappings:
     '30':
       Memory: 30720
 Conditions:
+  HasPermissionsBoundaryArn: !Not [!Equals [!Ref PermissionsBoundaryArn, '']]
   HasHealthCheckGracePeriod: !Not [!Equals [!Ref HealthCheckGracePeriod, -1]]
   HasAlertTopic: !Not [!Equals [!Ref ParentAlertStack, '']]
   HasServiceDiscovery: !Not [!Equals [!Ref ParentCloudMapStack, '']]
@@ -463,6 +472,7 @@ Resources:
           Principal:
             Service: 'ecs-tasks.amazonaws.com'
           Action: 'sts:AssumeRole'
+      PermissionsBoundary: !If [HasPermissionsBoundaryArn, !Ref PermissionsBoundaryArn, !Ref 'AWS::NoValue']
       Policies:
       - PolicyName: AmazonECSTaskExecutionRolePolicy # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html
         PolicyDocument:
@@ -490,6 +500,7 @@ Resources:
             Service: 'ecs-tasks.amazonaws.com'
           Action: 'sts:AssumeRole'
       ManagedPolicyArns: !If [HasTaskPolicies, !Split [',', !Ref TaskPolicies], !Ref 'AWS::NoValue']
+      PermissionsBoundary: !If [HasPermissionsBoundaryArn, !Ref PermissionsBoundaryArn, !Ref 'AWS::NoValue']
   TaskDefinition:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
@@ -681,6 +692,7 @@ Resources:
           Principal:
             Service: 'application-autoscaling.amazonaws.com'
           Action: 'sts:AssumeRole'
+      PermissionsBoundary: !If [HasPermissionsBoundaryArn, !Ref PermissionsBoundaryArn, !Ref 'AWS::NoValue']
       Policies:
       - PolicyName: AmazonEC2ContainerServiceAutoscaleRole
         PolicyDocument:

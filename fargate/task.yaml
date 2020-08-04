@@ -23,6 +23,10 @@ Metadata:
       - ParentCloudMapStack
       - ParentCloudMapIngressStack
     - Label:
+        default: 'Permission Parameters'
+      Parameters:
+      - PermissionsBoundary
+    - Label:
         default: 'Task Parameters'
       Parameters:
       - TaskPolicies
@@ -74,6 +78,10 @@ Parameters:
     Default: ''
   ParentCloudMapIngressStack:
     Description: 'Stack name of parent client stack based on state/client-sg.yaml template.'
+    Type: String
+    Default: ''
+  PermissionsBoundaryArn:
+    Description: 'Optional ARN for a policy that will be used as the permission boundary for all roles created by this template.'
     Type: String
     Default: ''
   TaskPolicies:
@@ -320,6 +328,7 @@ Mappings:
     '30':
       Memory: 30720
 Conditions:
+  HasPermissionsBoundaryArn: !Not [!Equals [!Ref PermissionsBoundaryArn, '']]
   HasTaskPolicies: !Not [!Equals [!Ref TaskPolicies, '']]
   HasTaskExecutionPolicies: !Not [!Equals [!Ref TaskExecutionPolicies, '']]
   HasAppCommand: !Not [!Equals [!Ref AppCommand, '']]
@@ -366,6 +375,7 @@ Resources:
           Principal:
             Service: 'ecs-tasks.amazonaws.com'
           Action: 'sts:AssumeRole'
+      PermissionsBoundary: !If [HasPermissionsBoundaryArn, !Ref PermissionsBoundaryArn, !Ref 'AWS::NoValue']
       Policies:
       - PolicyName: AmazonECSTaskExecutionRolePolicy # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html
         PolicyDocument:
@@ -393,6 +403,7 @@ Resources:
             Service: 'ecs-tasks.amazonaws.com'
           Action: 'sts:AssumeRole'
       ManagedPolicyArns: !If [HasTaskPolicies, !Split [',', !Ref TaskPolicies], !Ref 'AWS::NoValue']
+      PermissionsBoundary: !If [HasPermissionsBoundaryArn, !Ref PermissionsBoundaryArn, !Ref 'AWS::NoValue']
   TaskDefinition:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
