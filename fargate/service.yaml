@@ -33,7 +33,7 @@ Metadata:
     - Label:
         default: 'Permission Parameters'
       Parameters:
-      - PermissionsBoundary
+        - PermissionsBoundaryArn
     - Label:
         default: 'Task Parameters'
       Parameters:

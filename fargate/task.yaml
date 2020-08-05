@@ -25,7 +25,7 @@ Metadata:
     - Label:
         default: 'Permission Parameters'
       Parameters:
-      - PermissionsBoundary
+      - PermissionsBoundaryArn
     - Label:
         default: 'Task Parameters'
       Parameters:
@@ -403,7 +403,7 @@ Resources:
             Service: 'ecs-tasks.amazonaws.com'
           Action: 'sts:AssumeRole'
       ManagedPolicyArns: !If [HasTaskPolicies, !Split [',', !Ref TaskPolicies], !Ref 'AWS::NoValue']
-      PermissionsBoundary: !If [HasPermissionsBoundaryArn, !Ref PermissionsBoundaryArn, !Ref 'AWS::NoValue']
+        PermissionsBoundary: !If [HasPermissionsBoundaryArn, !Ref PermissionsBoundaryArn, !Ref 'AWS::NoValue']
   TaskDefinition:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
